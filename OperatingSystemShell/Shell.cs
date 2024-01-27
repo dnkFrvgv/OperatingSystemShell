@@ -6,19 +6,23 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Security.AccessControl;
+using System.Security.Principal;
+using System.Runtime.Versioning;
 
 namespace OperatingSystemShell
 {
+    [SupportedOSPlatform("windows")]
     public class Shell
     {
-        //private string _line;
-        //private string[] _commands;
         private string _currentDirectory;
+        private WindowsIdentity _currentUser;
+        private bool _hasError = false;
 
         public Shell()
         {
-            // init shell to home dir
             _currentDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            _currentUser = WindowsIdentity.GetCurrent();
         }
 
         public void RunLoop() 
@@ -31,7 +35,7 @@ namespace OperatingSystemShell
 
                 if(line != null)
                 {
-                    var commands = SplitLine(line);
+                    var commands = line.Split(" ");
                     RunCommand(commands);
                 }
                 else
@@ -46,9 +50,11 @@ namespace OperatingSystemShell
         {
             switch(commands[0].ToLower()){
                 case "dir":
-                    ExecuteDirCommand(commands);
+                    if (ExecuteDirCommand(commands))
+                    {
+                        return;
+                    }
                     break;
-
                 case "echo":
                     ExecuteEchoCommand();
                     break;
@@ -60,10 +66,17 @@ namespace OperatingSystemShell
                 case "help":
                     DisplayHelp();
                     break;
+                default:
+                    HandleError("An error occurred");
+                    break;
 
-                //default
             }
 
+        }
+
+        private void HandleError(string v)
+        {
+            throw new NotImplementedException();
         }
 
         private void DisplayHelp()
@@ -81,33 +94,81 @@ namespace OperatingSystemShell
             throw new NotImplementedException();
         }
 
-        // cd /path/to/directory
-        private void ExecuteDirCommand(string[] tokens)
+        public bool ExecuteDirCommand(string[] tokens)
         {
-            if (tokens[1] == null)
+            // if no arg was passed set to home dir
+            // TODO - or args is .
+            if (tokens.Length == 1)
             {
-                Console.WriteLine("Expected path after cd");
+                _currentDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                return true;
             }
             else
             {
-                ChangeDirectory(tokens[1]);
+                ValidatePath(tokens[1]);
+                
+                return true;
             }
         }
 
-        private bool ChangeDirectory(string path)
+ 
+
+        public bool ValidatePath(string path)
         {
             var listOfDirectories = CreatePathList(path);
 
+            // is it a relative path?
+            if (!path.StartsWith('\\') || path.StartsWith('.'))
+            {
+                // path exists?
+                if (Directory.Exists(path))
+                {
+                    if (UserHasDirectoryPermission(path))
+                    {
+                        return true;
 
+                    }
+                    HandleError("User doenst have permission to view dir");
+                    return false;
+                }
 
-            throw new NotImplementedException();
+                HandleError("path doesnt exist");
+                return false;
+            }
+            // go up a level?
+            if (listOfDirectories.First!.Value == "..")
+            {
+                // TODO
+            }
+            // whats left should be a full path
+            else
+            {
+                // TODO
+            }
+
+            return false;
+
 
         }
 
-
-        private LinkedList<string> CreatePathList(string path)
+        private bool UserHasFilePermissions(string path)
         {
-            string[] directories = path.Split("/");
+            throw new NotImplementedException();
+        }
+
+        public bool UserHasDirectoryPermission(string dirPath)
+        {
+            var userDeviceAndName = _currentUser.Name;
+
+            var dirInfo = new DirectoryInfo(dirPath);
+            DirectorySecurity accessControlList = dirInfo.GetAccessControl(AccessControlSections.All);
+
+            throw new NotImplementedException();
+        }
+
+        public LinkedList<string> CreatePathList(string path)
+        {
+            string[] directories = path.Split("\\");
             return new LinkedList<string>(directories);
         }
 
