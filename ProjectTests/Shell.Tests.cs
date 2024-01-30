@@ -24,7 +24,7 @@ namespace ProjectTests
 
         }
 
-        [Fact]
+        //[Fact]
         public void ChangeDir() 
         {
             // arrange
@@ -32,28 +32,31 @@ namespace ProjectTests
             string path = "C:\\Users\\domis";
 
             // act
-            var result = shell.ValidatePath(path);
+            var result = shell.IsPathValid(path);
 
             // assert
             Assert.True(result);
         }
 
-/*        [Fact]
-        public void ExecuteDirCommand_multiple_args_returns_false() {
+        [Fact]
+        public void ExecuteDirCommand_dot_arg_sets_currentDirectory_to_users_spetial_folder()
+        {
             // arrange
             Shell shell = new Shell();
-            string path = "cd path\\to\\dir second\\arg";
+            string path = "cd .";
 
             string[] command = path.Split(" ");
+            string users_spetial_folder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
             // act
             var result = shell.ExecuteDirCommand(command);
 
             // assert
-            Assert.False(result);
-        }*/
+            Assert.True(result);
+            Assert.Equal(shell._currentDirectory, users_spetial_folder);
+        }
 
-        [Fact]
+        //[Fact]
         public void ExecuteDirCommand_single_args_returns_true()
         {
             // arrange

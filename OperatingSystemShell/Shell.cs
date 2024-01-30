@@ -9,13 +9,14 @@ using System.Collections.Generic;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Runtime.Versioning;
+using System.IO;
 
 namespace OperatingSystemShell
 {
     [SupportedOSPlatform("windows")]
     public class Shell
     {
-        private string _currentDirectory;
+        public string _currentDirectory;
         private WindowsIdentity _currentUser;
         private bool _hasError = false;
 
@@ -96,58 +97,83 @@ namespace OperatingSystemShell
 
         public bool ExecuteDirCommand(string[] tokens)
         {
-            // if no arg was passed set to home dir
-            // TODO - or args is .
-            if (tokens.Length == 1)
+            // if no arg was passed or arg is "." set to home dir
+            if (tokens.Length == 1 || tokens.Length > 1 && tokens[1] == ".")
             {
                 _currentDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
                 return true;
             }
             else
             {
-                ValidatePath(tokens[1]);
-                
-                return true;
+                if(IsPathValid(tokens[1]))
+                {
+                    // is a full path
+                        // 1.set current dir to                         
+                    var listOfDirectories = CreatePathList(tokens[1]);
+
+                    // is it a relative path?
+                    if (!tokens[1].StartsWith('\\') || tokens[1].StartsWith('.'))
+                    {
+                        // 1.join path to _current dir 
+                        // 2.set current dir to dir
+                    }
+                    // go up a level?
+                    if (listOfDirectories.First!.Value == "..")
+                    {
+                        // TODO
+                    }
+                    // whats left should be a full path
+                    else
+                    {
+                        // TODO
+                    }
+
+                    return false;
+                }
+
+                return false;
             }
         }
 
  
 
-        public bool ValidatePath(string path)
+        public bool IsPathValid(string path)
         {
-            var listOfDirectories = CreatePathList(path);
+            var lastPosition = path.LastIndexOf("\\");
 
-            // is it a relative path?
-            if (!path.StartsWith('\\') || path.StartsWith('.'))
+            bool isLastPositionAFile = path.Substring(lastPosition + 1).Contains('.');
+
+            // last position is a file?
+            if (isLastPositionAFile)
             {
-                // path exists?
+
+                if (File.Exists(path))
+                {
+                    if (UserHasFilePermissions(path))
+                    {
+                        return true;
+                    }
+
+                    HandleError("User doenst have permission to view file");
+                    return false;
+                }
+            }
+            else
+            {
                 if (Directory.Exists(path))
                 {
                     if (UserHasDirectoryPermission(path))
                     {
                         return true;
-
                     }
+
                     HandleError("User doenst have permission to view dir");
                     return false;
                 }
-
-                HandleError("path doesnt exist");
-                return false;
-            }
-            // go up a level?
-            if (listOfDirectories.First!.Value == "..")
-            {
-                // TODO
-            }
-            // whats left should be a full path
-            else
-            {
-                // TODO
             }
 
+            HandleError("path doesnt exist");
             return false;
-
 
         }
 
